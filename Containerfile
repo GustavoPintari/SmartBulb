@@ -10,7 +10,6 @@ COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
-COPY lampada.py .
 
 RUN useradd --uid 1000 --no-create-home bulb && mkdir -p /data && chown bulb /data
 USER bulb

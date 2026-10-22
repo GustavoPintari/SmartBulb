@@ -12,17 +12,19 @@ from dataclasses import dataclass
 
 import tinytuya
 
-COLOR_NAMES = {
-    "vermelho": (255, 0, 0),
-    "verde": (0, 255, 0),
-    "azul": (0, 0, 255),
-    "amarelo": (255, 200, 0),
-    "laranja": (255, 100, 0),
-    "roxo": (140, 0, 255),
-    "rosa": (255, 0, 120),
-    "ciano": (0, 255, 255),
-    "branco": (255, 255, 255),
-}
+_COLORS = [
+    # (english, portuguese, rgb)
+    ("red", "vermelho", (255, 0, 0)),
+    ("green", "verde", (0, 255, 0)),
+    ("blue", "azul", (0, 0, 255)),
+    ("yellow", "amarelo", (255, 200, 0)),
+    ("orange", "laranja", (255, 100, 0)),
+    ("purple", "roxo", (140, 0, 255)),
+    ("pink", "rosa", (255, 0, 120)),
+    ("cyan", "ciano", (0, 255, 255)),
+    ("white", "branco", (255, 255, 255)),
+]
+COLOR_NAMES = {name: rgb for en, pt, rgb in _COLORS for name in (en, pt)}
 
 # Built-in Tuya scenes (DPS 25, scene_data v2). Each unit is:
 # interval(2) duration(2) mode(2: 00 static, 01 jump, 02 fade) H(4) S(4) V(4) bright(4) temp(4)
