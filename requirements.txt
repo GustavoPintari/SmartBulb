@@ -1,0 +1,5 @@
+fastapi==0.161.0
+uvicorn==0.54.0
+apscheduler==3.11.3
+tinytuya==1.20.0
+tzdata==2026.5

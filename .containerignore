@@ -1,0 +1,6 @@
+.env
+devices.json
+*.json.tmp
+__pycache__/
+data/
+deploy/

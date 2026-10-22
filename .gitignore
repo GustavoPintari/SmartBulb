@@ -1,0 +1,6 @@
+.env
+devices.json
+snapshot.json
+tinytuya.json
+__pycache__/
+data/
