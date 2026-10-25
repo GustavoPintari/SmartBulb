@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#0f1115">
+<link rel="manifest" href="/static/manifest.json">
+<link rel="icon" href="/static/icon.svg" type="image/svg+xml">
+<link rel="stylesheet" href="/static/app.css">
+<title>Entrar · SmartBulb</title>
+</head>
+<body>
+<main class="login-page">
+  <div class="login-card">
+    <img class="login-logo" src="/static/icon.svg" alt="">
+    <h1>SmartBulb</h1>
+    <p class="sub">Entre para controlar suas luzes</p>
+    <form id="login" novalidate>
+      <label class="f">Usuário
+        <input type="text" id="username" autocomplete="username" autocapitalize="none" spellcheck="false" required autofocus>
+      </label>
+      <label class="f">Senha
+        <span class="pw-wrap">
+          <input type="password" id="password" autocomplete="current-password" required>
+          <button type="button" class="pw-toggle" id="pw-toggle" aria-label="Mostrar senha">Mostrar</button>
+        </span>
+      </label>
+      <label class="remember"><input type="checkbox" id="remember" checked> Manter conectado por 30 dias</label>
+      <div class="login-error" id="error" role="alert"></div>
+      <button class="primary" type="submit" id="submit">Entrar</button>
+    </form>
+  </div>
+</main>
+<script>
+try {  // the accent colour chosen in the app
+  const accent = localStorage.getItem("sb.accent");
+  if (accent) document.documentElement.style.setProperty("--accent", accent);
+} catch {}
+const form = document.getElementById("login");
+const submit = document.getElementById("submit");
+const error = document.getElementById("error");
+const password = document.getElementById("password");
+
+document.getElementById("pw-toggle").onclick = (e) => {
+  const show = password.type === "password";
+  password.type = show ? "text" : "password";
+  e.target.textContent = show ? "Ocultar" : "Mostrar";
+};
+
+form.onsubmit = async (e) => {
+  e.preventDefault();
+  const username = document.getElementById("username").value.trim();
+  if (!username || !password.value) {
+    error.textContent = "Preencha usuário e senha";
+    return;
+  }
+  error.textContent = "";
+  submit.classList.add("loading");
+  try {
+    const res = await fetch("/api/login", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ username, password: password.value, remember: document.getElementById("remember").checked }),
+    });
+    if (!res.ok) {
+      let detail = "Não foi possível entrar";
+      try { detail = (await res.json()).detail || detail; } catch {}
+      throw new Error(detail);
+    }
+    submit.classList.remove("loading");
+    submit.classList.add("done");
+    location.replace("/");
+  } catch (err) {
+    submit.classList.remove("loading");
+    error.textContent = err.message;
+    form.classList.remove("shake");
+    void form.offsetWidth;  // restart the animation
+    form.classList.add("shake");
+    password.select();
+  }
+};
+</script>
+</body>
+</html>
