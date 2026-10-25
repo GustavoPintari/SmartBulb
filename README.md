@@ -32,9 +32,9 @@ smartbulb/
 **Control**
 - Power, white temperature and brightness
 - Colour from presets or a built-in picker: saturation/value square, hue bar, HEX and RGB fields
-- 26 scenes in three groups: **Work** (deep focus, study, reading, video call, creativity, evening
-  work…), **Relax** (sunset, candle, fireplace, ocean, forest, aurora, meditation, spa, moonlight,
-  cinema, dinner…) and **Fun**
+- 38 scenes in three groups: **Work** (deep focus, study, reading, video call, creativity, evening
+  work…), **Relax** (sunset, dusk, candle, fireplace, ocean, rain, forest, aurora, meditation,
+  romantic, spa, moonlight, cinema…) and **Fun**
 - Make your own scenes (up to 8 colours; static, jump or fade; speed and brightness) and try them
   on the bulb before saving
 - Favourites: save the current light and bring it back with one tap
@@ -292,6 +292,7 @@ podman exec smartbulb python -m app.cli scene night
 | `BULB_DEVICES_JSON`, `BULB_NAME` | `~/devices.json`, `Smart color` | alternative to the variables above |
 | `BULBS_FILE` | none | JSON with several bulbs (replaces the variables above) |
 | `BULB_DEMO` | unset | `N` simulates N bulbs, for trying the app without hardware |
+| `SCENE_SPEED_INVERT` | unset | `1` flips the speed of animated scenes (see Notes) |
 | `APP_USER` | `admin` | name of the first admin |
 | `APP_PASSWORD` or `APP_PASSWORD_FILE` | none | password of the first admin |
 | `AUTH_DISABLED` | unset | `1` disables login (trusted networks only) |
@@ -309,8 +310,9 @@ podman exec smartbulb python -m app.cli scene night
   wizard again and recreate the `bulb_key` secret.
 - Each bulb accepts only one connection at a time, so commands to the same bulb run one after
   another.
-- The new scenes are built with Tuya's scene format (DPS 25). Transition speed can vary between
-  models; if animated scenes feel too fast or slow, tune `SLOW`/`MEDIUM`/`FAST` in `app/bulb.py`.
+- Animated scenes step through 8 in-between shades so colour changes are smooth. Tuya doesn't
+  document whether a larger speed value is faster or slower; if the "slow" scenes (fireplace, ocean)
+  run faster than the "fast" ones (candle, party), set `SCENE_SPEED_INVERT=1` and restart.
 - The web UI text is in Brazilian Portuguese.
 
 ## License

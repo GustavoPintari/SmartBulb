@@ -31,9 +31,21 @@ DEFAULT_WATTS = 9.0
 # --- scene data (DPS 25, scene_data v2)
 # A scene is a number (2 hex digits) followed by up to 8 units of
 # interval(2) duration(2) mode(2) H(4) S(4) V(4) bright(4) temp(4).
-# interval/duration go from 0 to 100; larger values hold each step longer.
+# interval is the time between units and duration the transition time, both 0-100.
+# Tuya doesn't say which end is slow; SCENE_SPEED_INVERT=1 flips it if animated
+# scenes run faster when they should be slower.
 STATIC, JUMP, FADE = 0, 1, 2
-SLOW, MEDIUM, FAST = 0x5a, 0x46, 0x14
+SPEED_INVERTED = os.environ.get("SCENE_SPEED_INVERT") == "1"
+SCENE_STEPS = 8  # the most units a scene can hold
+
+
+def duration(slowness):
+    """DPS 25 interval/duration value for a slowness from 1 (fastest) to 100 (slowest)."""
+    slowness = max(1, min(100, round(slowness)))
+    return 101 - slowness if SPEED_INVERTED else slowness
+
+
+SLOW, MEDIUM, FAST = duration(90), duration(60), duration(25)
 
 
 def _unit(mode, speed, h=0, s=0, v=0, bright=0, temp=0):
@@ -47,7 +59,22 @@ def white_unit(bright, temp, mode=STATIC, speed=MEDIUM):
 
 def colour_unit(hue, sat, val, mode=STATIC, speed=MEDIUM):
     """hue in degrees, sat and val in percent."""
-    return _unit(mode, speed, h=hue % 360, s=sat * 10, v=max(10, val * 10))
+    return _unit(mode, speed, h=round(hue) % 360, s=round(sat * 10), v=max(10, round(val * 10)))
+
+
+def smooth_units(colours, speed, steps=SCENE_STEPS):
+    """Fade units cycling through `colours` (hue, sat%, val%), with in-between
+    shades added so each fade step is small instead of one big colour change."""
+    count = len(colours)
+    steps = max(steps, count) if count > 1 else 1
+    units = []
+    for i in range(steps):
+        position = i * count / steps
+        a, f = int(position), position - int(position)
+        (h0, s0, v0), (h1, s1, v1) = colours[a], colours[(a + 1) % count]
+        hue_step = ((h1 - h0 + 540) % 360) - 180  # shortest way round the colour wheel
+        units.append(colour_unit(h0 + hue_step * f, s0 + (s1 - s0) * f, v0 + (v1 - v0) * f, FADE, speed))
+    return units
 
 
 def encode_scene(number, units):
@@ -93,56 +120,61 @@ def _scene(number, label, category, *units):
     return Scene(label, category, encode_scene(number, units))
 
 
+def _fade(number, label, category, speed, *colours):
+    return Scene(label, category, encode_scene(number, smooth_units(colours, speed)))
+
+
 SCENES = {
     # work
     "work": Scene("Trabalho", "work", "020e0d0000000000000003e803e8"),
     "focus": _scene(0x08, "Foco profundo", "work", white_unit(100, 85)),
+    "daylight": _scene(0x60, "Luz do dia", "work", white_unit(100, 100)),
     "study": _scene(0x09, "Estudo", "work", white_unit(90, 70)),
     "read": Scene("Leitura", "work", "010e0d0000000000000003e801f4"),
     "meeting": _scene(0x0a, "Videochamada", "work", white_unit(80, 55)),
+    "coding": _scene(0x61, "Programação", "work", white_unit(65, 40)),
     "creative": _scene(0x0b, "Criatividade", "work", colour_unit(200, 25, 100)),
+    "brainstorm": _fade(0x62, "Brainstorm", "work", SLOW, (190, 30, 100), (160, 25, 100), (215, 28, 100)),
     "evening_work": _scene(0x0c, "Trabalho à noite", "work", white_unit(55, 25)),
     # relax
     "leisure": Scene("Lazer", "relax", "030e0d0000000000000001f401f4"),
     "dinner": _scene(0x0d, "Jantar", "relax", white_unit(40, 10)),
+    "cozy": _scene(0x63, "Aconchego", "relax", colour_unit(32, 85, 40)),
     "bedtime": _scene(0x0e, "Leitura na cama", "relax", white_unit(45, 0)),
     "cinema": _scene(0x0f, "Cinema", "relax", white_unit(10, 0)),
     "night": Scene("Noite", "relax", "000e0d0000000000000000c80000"),
-    "sunset": _scene(0x10, "Pôr do sol", "relax",
-                     colour_unit(25, 90, 90, FADE, SLOW), colour_unit(340, 70, 70, FADE, SLOW),
-                     colour_unit(38, 95, 80, FADE, SLOW)),
-    "candle": _scene(0x11, "Vela", "relax",
-                     colour_unit(28, 100, 45, FADE, FAST), colour_unit(24, 100, 30, FADE, FAST),
-                     colour_unit(30, 100, 50, FADE, FAST), colour_unit(26, 100, 35, FADE, FAST)),
-    "fireplace": _scene(0x12, "Lareira", "relax",
-                        colour_unit(12, 100, 70, FADE, MEDIUM), colour_unit(25, 100, 50, FADE, MEDIUM),
-                        colour_unit(5, 95, 60, FADE, MEDIUM)),
-    "ocean": _scene(0x13, "Oceano", "relax",
-                    colour_unit(195, 90, 70, FADE, SLOW), colour_unit(210, 80, 60, FADE, SLOW),
-                    colour_unit(180, 70, 65, FADE, SLOW)),
-    "forest": _scene(0x14, "Floresta", "relax",
-                     colour_unit(120, 70, 50, FADE, SLOW), colour_unit(95, 60, 60, FADE, SLOW),
-                     colour_unit(140, 80, 45, FADE, SLOW)),
-    "aurora": _scene(0x15, "Aurora", "relax",
-                     colour_unit(150, 90, 60, FADE, SLOW), colour_unit(175, 80, 60, FADE, SLOW),
-                     colour_unit(270, 70, 55, FADE, SLOW), colour_unit(300, 60, 50, FADE, SLOW)),
-    "meditation": _scene(0x16, "Meditação", "relax",
-                         colour_unit(265, 70, 20, FADE, SLOW), colour_unit(265, 70, 60, FADE, SLOW)),
+    "sunset": _fade(0x10, "Pôr do sol", "relax", SLOW, (25, 90, 90), (340, 70, 70), (38, 95, 80)),
+    "dusk": _fade(0x64, "Crepúsculo", "relax", SLOW, (280, 60, 45), (330, 65, 55), (20, 80, 60)),
+    "candle": _fade(0x11, "Vela", "relax", FAST, (28, 100, 45), (24, 100, 32), (30, 100, 50), (26, 100, 38)),
+    "fireplace": _fade(0x12, "Lareira", "relax", SLOW, (12, 100, 70), (25, 100, 50), (5, 95, 60)),
+    "ocean": _fade(0x13, "Oceano", "relax", SLOW, (195, 90, 70), (210, 80, 60), (180, 70, 65)),
+    "deep_sea": _fade(0x65, "Fundo do mar", "relax", SLOW, (220, 90, 30), (235, 85, 25), (205, 80, 35)),
+    "rain": _fade(0x66, "Chuva", "relax", SLOW, (215, 35, 35), (205, 25, 45), (225, 40, 30)),
+    "forest": _fade(0x14, "Floresta", "relax", SLOW, (120, 70, 50), (95, 60, 60), (140, 80, 45)),
+    "aurora": _fade(0x15, "Aurora", "relax", SLOW, (150, 90, 60), (175, 80, 60), (270, 70, 55), (300, 60, 50)),
+    "meditation": _fade(0x16, "Meditação", "relax", SLOW, (265, 70, 20), (265, 70, 60)),
+    "romantic": _fade(0x67, "Romântico", "relax", SLOW, (340, 70, 40), (355, 75, 32), (320, 60, 38)),
+    "lavender": _scene(0x68, "Lavanda", "relax", colour_unit(270, 35, 45)),
     "spa": _scene(0x17, "Spa", "relax", colour_unit(170, 45, 45)),
     "moonlight": _scene(0x18, "Luar", "relax", colour_unit(225, 60, 15)),
-    # fun (Tuya factory scenes and a party mode)
+    # fun (Tuya factory scenes and a few more)
     "soft": Scene("Suave", "fun", "04464602007803e803e800000000464602007803e8000a00000000"),
     "rainbow": Scene("Arco-íris", "fun", "05464601000003e803e800000000464601007803e803e800000000"
                                          "46460100f003e803e800000000"),
+    "smooth_rainbow": _fade(0x69, "Arco-íris suave", "fun", SLOW, (0, 100, 100), (120, 100, 100), (240, 100, 100)),
     "shine": Scene("Piscar", "fun", "06464601000003e803e800000000464601007803e803e800000000"
                                     "46460100f003e803e800000000"),
     "gorgeous": Scene("Deslumbrante", "fun", "07464602000003e803e800000000464602007803e803e800000000"
                                              "46460200f003e803e800000000464602003d03e803e800000000"
                                              "46460200ae03e803e800000000464602011303e803e800000000"),
+    "neon": _fade(0x6a, "Neon", "fun", MEDIUM, (300, 100, 100), (180, 100, 100), (60, 100, 100)),
     "party": _scene(0x19, "Festa", "fun",
                     colour_unit(0, 100, 100, JUMP, FAST), colour_unit(300, 100, 100, JUMP, FAST),
                     colour_unit(230, 100, 100, JUMP, FAST), colour_unit(50, 100, 100, JUMP, FAST),
                     colour_unit(180, 100, 100, JUMP, FAST)),
+    "christmas": _scene(0x6b, "Natal", "fun",
+                        colour_unit(0, 100, 100, JUMP, MEDIUM), colour_unit(120, 100, 80, JUMP, MEDIUM),
+                        colour_unit(45, 60, 100, JUMP, MEDIUM)),
 }
 
 

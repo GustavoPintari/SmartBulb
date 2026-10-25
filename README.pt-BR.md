@@ -33,9 +33,9 @@ smartbulb/
 - Liga/desliga, temperatura do branco e brilho
 - Cor por cores prontas ou por um seletor próprio: quadro de saturação/intensidade, barra de matiz
   e campos HEX e RGB
-- 26 cenas em três grupos: **Trabalho** (Foco profundo, Estudo, Leitura, Videochamada, Criatividade,
-  Trabalho à noite…), **Relaxar** (Pôr do sol, Vela, Lareira, Oceano, Floresta, Aurora, Meditação,
-  Spa, Luar, Cinema, Jantar…) e **Diversão**
+- 38 cenas em três grupos: **Trabalho** (Foco profundo, Estudo, Leitura, Videochamada, Criatividade,
+  Trabalho à noite…), **Relaxar** (Pôr do sol, Crepúsculo, Vela, Lareira, Oceano, Chuva, Floresta,
+  Aurora, Meditação, Romântico, Spa, Luar, Cinema…) e **Diversão**
 - Crie suas próprias cenas (até 8 cores, transição fixa, em salto ou gradiente, velocidade e brilho)
   e teste na lâmpada antes de salvar
 - Favoritos: salve a luz atual e aplique de novo com um toque
@@ -297,6 +297,7 @@ podman exec smartbulb python -m app.cli cena noite
 | `BULB_DEVICES_JSON`, `BULB_NAME` | `~/devices.json`, `Smart color` | alternativa às variáveis acima |
 | `BULBS_FILE` | nenhum | JSON com várias lâmpadas (substitui as variáveis acima) |
 | `BULB_DEMO` | não definido | `N` simula N lâmpadas, para testar sem hardware |
+| `SCENE_SPEED_INVERT` | não definido | `1` inverte a velocidade das cenas animadas (veja Observações) |
 | `APP_USER` | `admin` | nome do primeiro administrador |
 | `APP_PASSWORD` ou `APP_PASSWORD_FILE` | nenhum | senha do primeiro administrador |
 | `AUTH_DISABLED` | não definido | `1` desliga o login (só para rede confiável) |
@@ -314,9 +315,10 @@ podman exec smartbulb python -m app.cli cena noite
   wizard de novo e recrie o secret `bulb_key`.
 - A lâmpada aceita uma conexão por vez, então os comandos para cada lâmpada são executados em
   sequência.
-- As cenas novas foram montadas com o formato de cena da Tuya (DPS 25). A velocidade das transições
-  pode variar de um modelo para outro. Se as cenas animadas ficarem rápidas ou lentas demais, ajuste
-  `SLOW`/`MEDIUM`/`FAST` em `app/bulb.py`.
+- As cenas animadas passam por 8 tons intermediários, para a troca de cor ser suave. A documentação
+  da Tuya não diz se um número maior no campo de velocidade é mais rápido ou mais lento. Se as cenas
+  "lentas" (Lareira, Oceano) ficarem mais rápidas que as "rápidas" (Vela, Festa), defina
+  `SCENE_SPEED_INVERT=1` e reinicie.
 
 ## Licença
 
