@@ -2,10 +2,11 @@
 import colorsys
 import secrets
 
-from .bulb import FADE, JUMP, SCENES, STATIC, colour_unit, decode_scene, encode_scene, parse_color, unit_preview
+from .bulb import (FADE, JUMP, SCENES, STATIC, colour_unit, decode_scene, duration, encode_scene, parse_color,
+                   smooth_units, unit_preview)
 
 TRANSITIONS = {"static": STATIC, "jump": JUMP, "fade": FADE}
-CUSTOM_SCENE_BASE = 0x20  # scene numbers for user scenes, after the built-in ones
+CUSTOM_SCENE_BASE = 0x20  # user scenes use 0x20-0x5f; built-in ones are below and above
 MAX_FAVORITES = 48
 MAX_SCENES = 32
 
@@ -19,14 +20,15 @@ def _preview(data):
 def custom_scene_data(scene):
     """Encode a user scene: colours, transition and speed (1 slow - 100 fast)."""
     mode = TRANSITIONS[scene["transition"]]
-    duration = max(1, round(100 - scene["speed"] * 0.95))
-    units = []
-    colours = scene["colors"][:1] if mode == STATIC else scene["colors"]
-    for colour in colours:
+    speed = duration(101 - scene["speed"])
+    colours = []
+    for colour in scene["colors"][:1] if mode == STATIC else scene["colors"]:
         r, g, b = parse_color(colour)
         hue, sat, _ = colorsys.rgb_to_hsv(r / 255, g / 255, b / 255)
-        units.append(colour_unit(round(hue * 360), round(sat * 100), scene["brightness"], mode, duration))
-    return encode_scene(scene["number"], units)
+        colours.append((hue * 360, sat * 100, scene["brightness"]))
+    if mode == FADE and len(colours) > 1:
+        return encode_scene(scene["number"], smooth_units(colours, speed))
+    return encode_scene(scene["number"], [colour_unit(h, s, v, mode, speed) for h, s, v in colours])
 
 
 class Library:
