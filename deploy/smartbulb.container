@@ -1,6 +1,6 @@
 # Podman Quadlet unit: copy to ~/.config/containers/systemd/ (rootless)
 [Unit]
-Description=smartbulb - local Tuya bulb control
+Description=SmartBulb - local Tuya bulb control
 Wants=network-online.target
 After=network-online.target
 
@@ -14,6 +14,9 @@ Secret=bulb_key,type=mount,target=/run/secrets/bulb_key
 Secret=app_password,type=mount,target=/run/secrets/app_password
 Environment=BULB_KEY_FILE=/run/secrets/bulb_key
 Environment=APP_PASSWORD_FILE=/run/secrets/app_password
+# Several bulbs: `podman secret create bulbs ./bulbs.json`, then uncomment
+#Secret=bulbs,type=mount,target=/run/secrets/bulbs
+#Environment=BULBS_FILE=/run/secrets/bulbs
 HealthCmd=python -c "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/healthz')"
 HealthInterval=30s
 NoNewPrivileges=true

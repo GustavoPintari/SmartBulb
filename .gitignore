@@ -4,3 +4,4 @@ snapshot.json
 tinytuya.json
 __pycache__/
 data/
+.venv/

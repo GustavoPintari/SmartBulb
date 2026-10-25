@@ -3,3 +3,4 @@ uvicorn==0.54.0
 apscheduler==3.11.3
 tinytuya==1.20.0
 tzdata==2026.5
+paho-mqtt==2.1.0
